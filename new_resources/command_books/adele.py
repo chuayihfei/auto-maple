@@ -318,7 +318,7 @@ class Skill_F3(BaseSkill):
     rep_interval=0.5
     skill_cool_down=1800
     ground_skill=False
-    buff_time=0
+    buff_time=1799
     combo_delay = 0.25
 
 class Skill_F4(BaseSkill):
@@ -329,7 +329,7 @@ class Skill_F4(BaseSkill):
     rep_interval=0.5
     skill_cool_down=1800
     ground_skill=False
-    buff_time=0
+    buff_time=1799
     combo_delay = 0.25
 
 class Skill_F5(BaseSkill):
@@ -340,7 +340,7 @@ class Skill_F5(BaseSkill):
     rep_interval=0.5
     skill_cool_down=1800
     ground_skill=False
-    buff_time=0
+    buff_time=1799
     combo_delay = 0.25
     
 
