@@ -12,6 +12,7 @@ import requests
 from src.common.vkeys import key_down, key_up, press, click
 from src.routine.components import Point
 from src.common.vkeys import release_unreleased_key
+import src.modules.telegram_bot as telebot
 
 # A rune's symbol on the minimap
 RUNE_RANGES = (
@@ -26,6 +27,14 @@ OTHER_RANGES = (
 )
 other_filtered = utils.filter_color(cv2.imread('assets/other_template.png'), OTHER_RANGES)
 OTHER_TEMPLATE = cv2.cvtColor(other_filtered, cv2.COLOR_BGR2GRAY)
+
+# Guild players' symbols on the minimap
+GUILDIE_RANGES = (
+    # ((110, 58, 215), (130, 163, 295)),
+    ((110, 49, 181), (130, 112, 255)),
+)
+guildie_filtered = utils.filter_color(cv2.imread('assets/guildie.png'), GUILDIE_RANGES)
+GUILDIE_TEMPLATE = cv2.cvtColor(guildie_filtered, cv2.COLOR_BGR2GRAY)
 
 # The Elite Boss's warning sign
 ELITE_TEMPLATE = cv2.imread('assets/elite_template2.jpg', 0)
@@ -76,8 +85,10 @@ class Notifier:
         self.thread.start()
 
     def _main(self):
+
         self.ready = True
         prev_others = 0
+        prev_g_others = 0
         rune_start_time = time.time()
         detection_i = 0
         rune_check_count = 0
@@ -101,11 +112,12 @@ class Notifier:
                 elite = utils.multi_match(elite_frame, ELITE_TEMPLATE, threshold=0.9)
                 if len(elite) > 0:
                     self._send_msg_to_line_notify("黑王出沒")
+                    telebot.send_warning_msg("Elite boss spawned")
                     if settings.rent_frenzy == False and not settings.auto_change_channel:
                         self._alert('siren')
                     elif settings.auto_change_channel:
-                        pass
-                        # config.should_change_channel = True
+                        # pass
+                        config.should_change_channel = True
 
                 if settings.rent_frenzy == False and not settings.story_mode:
                     # Check for other players entering the map
@@ -113,11 +125,29 @@ class Notifier:
                     others = len(utils.multi_match(filtered, OTHER_TEMPLATE, threshold=0.5))
                     config.stage_fright = others > 0
                     if time.time() - config.latest_change_channel_or_map <= 60 and config.stage_fright:
+                        print("player here3")
+                        telebot.send_warning_msg("Player in new cc, performing auto cc")
                         config.should_change_channel = True # if find other in 1 min between change channel, change again
                     if others != prev_others:
                         if others > prev_others:
                             self._ping('ding')
+                            print("player here4")
                         prev_others = others
+
+                if settings.rent_frenzy == False and not settings.story_mode:
+                    # Check for guildie entering the map
+                    filtered = utils.filter_color(minimap, GUILDIE_RANGES)
+                    g_others = len(utils.multi_match(filtered, GUILDIE_TEMPLATE, threshold=0.5))
+                    config.stage_fright = g_others > 0
+                    if time.time() - config.latest_change_channel_or_map <= 60 and config.stage_fright:
+                        telebot.send_warning_msg("Guildie in new cc, performing auto cc")
+                        config.should_change_channel = True # if find other in 1 min between change channel, change again
+                        print("guildie here, cc")
+                    if g_others != prev_g_others:
+                        if g_others > prev_g_others:
+                            self._ping('ding')
+                            print("guildie here")
+                        prev_g_others = g_others
 
                 # check for fiona_lie_detector
                 fiona_frame = frame[height-400:height, width - 300:width]
@@ -136,17 +166,17 @@ class Notifier:
                         curse_frame = frame[0:height // 2, 0:width//2]
                         rune_curse_detector = utils.multi_match(curse_frame, RUNE_CURSE_TEMPLATE, threshold=0.9)
                         if len(rune_curse_detector) > 0:
-                            print("find rune_curse_detector")
                             if settings.auto_change_channel:
                                 if config.should_change_channel == False and config.should_solve_rune == False:
                                     if time.time() - config.latest_change_channel_or_map <= 60:
                                         config.should_solve_rune = True
                                     else:
                                         config.should_change_channel = True
+                                        telebot.send_info_msg("Rune curse present, performing auto cc")
                                     self._ping('rune_appeared', volume=0.75)
                             else:
                                 self._send_msg_to_line_notify("輪之詛咒")
-                                self._alert('siren')
+                                telebot.send_warning_msg("Rune curse present & Auto CC is off")
 
                     # check for unexpected conversation
                     if not settings.story_mode:
@@ -169,6 +199,7 @@ class Notifier:
                     if len(revive_confirm) > 0:
                         if settings.rent_frenzy == False:
                             self._send_msg_to_line_notify("角色死亡")
+                            telebot.send_info_msg("Character died")
                         revive_confirm_pos = min(revive_confirm, key=lambda p: p[0])
                         target = (
                             round(revive_confirm_pos[0] +(width //2-150)),
@@ -178,7 +209,10 @@ class Notifier:
                         time.sleep(1)
                         utils.game_window_click((700,100), button='right')
                         if not settings.auto_revive:
+                            telebot.send_warning_msg("Auto revive failed as it is set to off")
                             self._alert('siren')
+                        if settings.auto_revive:
+                            telebot.send_info_msg("Auto revive succeed")
 
                 
                 # Check for skill cd
@@ -223,16 +257,20 @@ class Notifier:
                             config.bot.rune_active = True
                             rune_check_count = 0
                             self._ping('rune_appeared', volume=0.75)
+                            telebot.send_info_msg("Rune spawned")
                     elif now - rune_start_time > self.rune_alert_delay and now - config.latest_solved_rune >= (60 * int(settings.rune_cd_min) + self.rune_alert_delay):     # Alert if rune hasn't been solved
                         config.bot.rune_active = False
                         self._send_msg_to_line_notify("解輪耗時過久")
                         if settings.auto_change_channel:
                             config.should_change_channel = True
+                            telebot.send_warning_msg("Rune took too long to solve. Auto CC in progress.")
                         else:
                             self._alert('siren')
+                            telebot.send_warning_msg("Too long to solve rune | Auto CC off")
                     elif config.bot.solve_rune_fail_count >= 3 and not settings.auto_change_channel:
                         self._send_msg_to_line_notify("多次解輪失敗")
                         self._alert('siren')
+                        telebot.send_warning_msg("Unable to solve rune | Auto CC off")
                     else:
                         # check for rune is actually existing
                         if detection_i % 50 == 0:
@@ -258,6 +296,7 @@ class Notifier:
                                 config.bot.in_rune_buff = True
                                 rune_start_time = now
                                 print('in rune buff')
+                                telebot.send_warning_msg("In rune buff | Possible bot failure")
                             else:
                                 config.bot.in_rune_buff = False
 
@@ -294,13 +333,14 @@ class Notifier:
         # use go home scroll
         # kb.press("f9")
 
-        while not kb.is_pressed(config.listener.config['Start/stop']):
-            time.sleep(0.1)
-            if config.enabled:
-                break
+        # while not kb.is_pressed(config.listener.config['Start/stop']):
+        #     time.sleep(0.1)
+        #     if config.enabled:
+        #         break
         self.mixer.stop()
         time.sleep(1)
         config.listener.enabled = True
+        config.enabled = True
 
     def _ping(self, name, volume=0.5):
         """A quick notification for non-dangerous events."""

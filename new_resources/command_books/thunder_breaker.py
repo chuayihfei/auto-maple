@@ -3,6 +3,7 @@ import time
 from src.routine.components import Command, CustomKey, SkillCombination, Fall, BaseSkill, GoToMap, ChangeChannel, Frenzy, Player_jump, WaitStanding, WealthPotion
 from src.common.vkeys import press, key_down, key_up
 import cv2
+import src.modules.telegram_bot as telebot
 
 IMAGE_DIR = config.RESOURCES_DIR + '/command_books/thunder_breaker/'
 DEATH_DEBUFF_TEMPLATE = cv2.imread(IMAGE_DIR + 'dp_template.png', 0)
@@ -321,8 +322,10 @@ class CheckDeathPenalty(Command):
                 print('charm_pos : ', charm_pos)
                 target = (round(charm_pos[0]), round(charm_pos[1]))
                 utils.game_window_click(target, button='left', click_time = 2, delay = 0.01)
+                telebot.send_info_msg("Charm used")
             else:
                 print("No charm in inventory!")
+                telebot.send_warning_msg("No charm in inventory")
 
             #Close inventory
             press("i")
