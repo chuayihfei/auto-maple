@@ -143,7 +143,7 @@ auto_change_channel = False
 
 story_mode = False
 
-auto_revive = False
+auto_revive = True
 
 rune_cd_min = 15
 
