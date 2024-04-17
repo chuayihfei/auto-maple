@@ -21,6 +21,11 @@ class Key:
     # Buffs
     ROLL_OF_THE_DICE    = '0'    # 
     MAPLE_WARRIOR       = '-'    # Maple Warrior
+    SPEED_INFUSION      = '='    # Speed Infusion
+    COMBAT_ORDERS       = '['    # Combat Orders
+    ADVANCED_BLESSING   = '8'    # Advanced Blessings
+
+
 
     MONSTER_PARK_GREEN  = 'f4' 
     MONSTER_PARK_GOLD   = 'f5'
@@ -214,7 +219,7 @@ class Buff(Command):
 
     def main(self):
         # buffs = [Key.SPEED_INFUSION, Key.HOLY_SYMBOL, Key.SHARP_EYE, Key.COMBAT_ORDERS, Key.ADVANCED_BLESSING]
-        buffs = [Key.MAPLE_WARRIOR, Key.ROLL_OF_THE_DICE]
+        buffs = [Key.SPEED_INFUSION, Key.MAPLE_WARRIOR, Key.ROLL_OF_THE_DICE, Key.COMBAT_ORDERS, Key.ADVANCED_BLESSING]
         # monPark = [Key.MONSTER_PARK_GOLD, Key.MONSTER_PARK_RED, Key.MONSTER_PARK_GREEN]
         now = time.time()
         utils.wait_for_is_standing(1000)
